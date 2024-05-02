@@ -1,1 +1,35 @@
 This is Support vector machine code for CYP2C19 classification
+
+from sklearn import svm
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import accuracy_score
+from sklearn import datasets
+import numpy as np
+from rdkit import Chem
+from rdkit.Chem import AllChem
+from tdc.single_pred import ADME
+from DeepPurpose import utils, CompoundPred
+from sklearn.preprocessing import StandardScaler
+from sklearn.svm import SVC
+from sklearn.metrics import accuracy_score
+from tdc.single_pred import ADME
+
+data = ADME(name = 'CYP2C19_Veith').get_data(format = 'dict')
+X, y = data['Drug'], data['Y']
+X_morgan = [AllChem.GetMorganFingerprintAsBitVect(Chem.MolFromSmiles(smiles), 2, nBits=1024) for smiles in X]
+X_morgan_np = np.array([np.array(fp) for fp in X_morgan])
+# 데이터 분할: 학습 및 테스트 세트
+X_train, X_test, y_train, y_test = train_test_split(X_morgan_np, y, test_size=0.2, random_state=42)
+sc = StandardScaler()
+X_train = sc.fit_transform(X_train)
+X_test = sc.transform(X_test)
+
+model = svm.SVC(kernel='rbf', C= 1, gamma = 0.001, random_state=42)
+model.fit(X_train, y_train)
+
+# 학습된 모델을 사용하여 테스트 데이터에 대한 예측 수행
+y_pred = model.predict(X_test)
+
+# 정확도 출력
+accuracy = accuracy_score(y_test, y_pred)
+print("Accuracy:", accuracy)
