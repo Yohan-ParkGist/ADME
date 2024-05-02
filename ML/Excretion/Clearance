@@ -1,1 +1,83 @@
 This is Random forest regressor code for Clearance
+
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import accuracy_score
+from sklearn import datasets
+from sklearn.metrics import mean_squared_error
+import numpy as np
+from rdkit import Chem
+from rdkit.Chem import AllChem
+from tdc.single_pred import ADME
+from DeepPurpose import utils, CompoundPred
+
+#둘 중 하나의 데이터셋 선택
+from tdc.single_pred import ADME
+data = ADME(name = 'Clearance_Hepatocyte_AZ').get_data(format = 'dict')
+X, y = data['Drug'], data['Y']
+
+from tdc.single_pred import ADME
+data = ADME(name = 'Clearance_Microsome_AZ').get_data(format = 'dict')
+X, y = data['Drug'], data['Y']
+
+X_morgan = [AllChem.GetMorganFingerprintAsBitVect(Chem.MolFromSmiles(smiles), 2, nBits=1024) for smiles in X]
+X_morgan_np = np.array([np.array(fp) for fp in X_morgan])
+# 데이터 분할: 학습 및 테스트 세트
+X_train, X_test, y_train, y_test = train_test_split(X_morgan_np, y, test_size=0.2, random_state=42)
+
+model = RandomForestRegressor(min_samples_leaf=4, min_samples_split=4 ,n_estimators=100, random_state=42)
+model.fit(X_train, y_train)
+
+# 학습된 모델을 사용하여 테스트 데이터에 대한 예측 수행
+y_pred = model.predict(X_test)
+
+# 평가: 평균 제곱 오차(Mean Squared Error) 계산
+mse = mean_squared_error(y_test, y_pred)
+print("Mean Squared Error:", mse)
+
+
+##############################################################################################
+#Linear regression
+
+import numpy as np
+from rdkit import Chem
+from rdkit.Chem import AllChem
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LinearRegression
+from sklearn.metrics import mean_squared_error
+
+# 함수 정의: SMILES를 Morgan fingerprint로 변환
+def smiles_to_morgan_fingerprint(smiles):
+    mol = Chem.MolFromSmiles(smiles)
+    if mol is None:
+        return None
+    return AllChem.GetMorganFingerprintAsBitVect(mol, 2, nBits=1024)
+
+# 데이터 가져오기
+data = ADME(name='Clearance_Microsome_AZ').get_data(format='dict')
+X_smiles, y = data['Drug'], data['Y']
+
+# SMILES를 Morgan fingerprint로 변환
+X_fps = []
+for smiles in X_smiles:
+    fp = smiles_to_morgan_fingerprint(smiles)
+    if fp is not None:
+        X_fps.append(fp)
+    else:
+        X_fps.append(np.zeros(1024))  # 변환이 실패한 경우 0으로 채움
+
+X = np.array(X_fps)
+
+# 데이터 분할
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+# 선형 회귀 모델 학습
+model = LinearRegression()
+model.fit(X_train, y_train)
+
+# 테스트 데이터에 대한 예측
+y_pred = model.predict(X_test)
+
+# 모델 평가
+mse = mean_squared_error(y_test, y_pred)
+print("Mean Squared Error:", mse)
