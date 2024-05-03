@@ -13,18 +13,20 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.svm import SVC
 
 from tdc.single_pred import ADME
-data = ADME(name = 'BBB_Martins').get_data(format = 'dict')
-X, y = data['Drug'], data['Y']
+adme = ADME(name='BBB_Martins')
+#데이터 positive와 negative의 차이가 커서 balancing을 진행한다.
+balanced_data = adme.balanced(oversample=True, seed=42)
+X, y = balanced_data['Drug'], balanced_data['Y']
 
 X_morgan = [AllChem.GetMorganFingerprintAsBitVect(Chem.MolFromSmiles(smiles), 2, nBits=1024) for smiles in X]
 X_morgan_np = np.array([np.array(fp) for fp in X_morgan])
 # 데이터 분할: 학습 및 테스트 세트
 X_train, X_test, y_train, y_test = train_test_split(X_morgan_np, y, test_size=0.2, random_state=42)
 
-#stardard scaler를 안했을때가 이상하게 acc가 더 높았음
+
 sc = StandardScaler()
-#X_train = sc.fit_transform(X_train)
-#X_test = sc.transform(X_test)
+X_train = sc.fit_transform(X_train)
+X_test = sc.transform(X_test)
 
 model = svm.SVC(kernel='rbf', random_state=42)
 model.fit(X_train, y_train)
